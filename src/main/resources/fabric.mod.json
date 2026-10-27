@@ -3,10 +3,13 @@
   "id": "bigcolorchange",
   "version": "${version}",
   "name": "Big Color Change",
-  "description": "A client-side post-processing color evolution effect for Minecraft.",
+  "description": "A client-side mod that smoothly shifts the colors of the full screen through random hues.",
   "authors": ["brothalucious-web"],
   "environment": "client",
   "entrypoints": { "client": ["dev.brothalucious.bigcolorchange.BigColorChangeClient"] },
+  "mixins": [
+    "bigcolorchange.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.2",
