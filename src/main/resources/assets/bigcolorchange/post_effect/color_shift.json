@@ -15,8 +15,40 @@
       "output": "swap",
       "uniforms": [
         {
-          "name": "HueShift",
-          "values": [0.0]
+          "name": "Transition",
+          "values": [
+            0
+          ]
+        },
+        {
+          "name": "ColorCount",
+          "values": [
+            0
+          ]
+        },
+        {
+          "name": "SkyHue",
+          "values": [
+            0
+          ]
+        },
+        {
+          "name": "TerrainHue",
+          "values": [
+            0
+          ]
+        },
+        {
+          "name": "EntitiesHue",
+          "values": [
+            0
+          ]
+        },
+        {
+          "name": "UiHue",
+          "values": [
+            0
+          ]
         }
       ]
     },
