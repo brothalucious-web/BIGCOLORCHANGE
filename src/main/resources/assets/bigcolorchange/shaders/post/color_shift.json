@@ -2,9 +2,9 @@
   "vertex": "minecraft:post/blit",
   "fragment": "bigcolorchange:post/color_shift",
   "samplers": [
-    { "name": "In" }
+    { "name": "InSampler" }
   ],
   "uniforms": [
-    { "name": "HueShift", "type": "float", "value": 0.0 }
+    { "name": "HueShift", "type": "float", "count": 1, "values": [0.0] }
   ]
 }
