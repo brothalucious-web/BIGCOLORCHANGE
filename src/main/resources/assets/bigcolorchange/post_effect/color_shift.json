@@ -21,7 +21,7 @@
       ]
     },
     {
-      "program": "bigcolorchange:post/color_shift",
+      "program": "minecraft:post/blit",
       "inputs": [
         {
           "sampler_name": "In",
@@ -29,13 +29,7 @@
           "bilinear": true
         }
       ],
-      "output": "minecraft:main",
-      "uniforms": [
-        {
-          "name": "HueShift",
-          "values": [0.0]
-        }
-      ]
+      "output": "minecraft:main"
     }
   ]
 }
