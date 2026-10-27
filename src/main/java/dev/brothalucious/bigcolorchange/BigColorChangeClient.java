@@ -1,12 +1,12 @@
 package dev.brothalucious.bigcolorchange;
 
+import java.util.Random;
+
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.GraphicsMode;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import org.ladysnake.satin.api.event.PostWorldRenderCallback;
 import org.ladysnake.satin.api.managed.ManagedShaderEffect;
 import org.ladysnake.satin.api.managed.ShaderEffectManager;
 import org.ladysnake.satin.api.managed.uniform.Uniform1f;
@@ -17,63 +17,72 @@ public final class BigColorChangeClient implements ClientModInitializer {
     public static final String MOD_ID = "bigcolorchange";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    private static final long START_DELAY_TICKS = 20L * 60L;
-    private static final long TRANSITION_TICKS = 20L * 20L;
-    private static final long STAGE_TICKS = START_DELAY_TICKS + TRANSITION_TICKS;
+    private static final Random RANDOM = new Random();
+    private static final int MIN_TRANSITION_TICKS = 80;
+    private static final int MAX_TRANSITION_TICKS = 180;
 
-    private static long ticks;
-    private static float hueShift;
     private static ManagedShaderEffect effect;
     private static Uniform1f hueUniform;
+    private static int transitionTicks;
+    private static int elapsedTicks;
+    private static float startHue;
+    private static float targetHue;
+    private static float hueShift;
 
     @Override
     public void onInitializeClient() {
         effect = ShaderEffectManager.getInstance().manage(Identifier.of(MOD_ID, "color_shift"));
         hueUniform = effect.findUniform1f("HueShift");
+        chooseNextTarget(0.0F);
 
         ClientTickEvents.END_CLIENT_TICK.register(BigColorChangeClient::tick);
-
-        // This callback runs after the world is rendered every frame. The previous
-        // ShaderEffectRenderCallback only runs when Minecraft draws the entity-outline
-        // framebuffer, so it does not reliably apply a full-screen effect.
-        PostWorldRenderCallback.EVENT.register((camera, tickDelta) -> {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.world == null || client.player == null || effect == null) {
-                return;
-            }
-
-            // Satin warns that rendering a PostEffectProcessor here conflicts with
-            // Fabulous graphics. Keep the game visible and report the limitation.
-            if (client.options.getGraphicsMode().getValue() == GraphicsMode.FABULOUS) {
-                return;
-            }
-
-            if (hueUniform != null) {
-                hueUniform.set(hueShift);
-            }
-            effect.render(tickDelta);
-        });
-
-        LOGGER.info("Big Color Change loaded: normal colors for 60 seconds, then a gradual hue cycle.");
+        LOGGER.info("Big Color Change loaded: continuously shifting screen colors through smooth, randomized hue transitions.");
     }
 
     private static void tick(MinecraftClient client) {
         if (client.world == null || client.player == null) {
-            ticks = 0L;
+            elapsedTicks = 0;
             hueShift = 0.0F;
+            startHue = 0.0F;
+            chooseNextTarget(0.0F);
             return;
         }
 
-        ticks++;
-        if (ticks < START_DELAY_TICKS) {
-            hueShift = 0.0F;
-            return;
+        elapsedTicks++;
+        if (elapsedTicks >= transitionTicks) {
+            chooseNextTarget(hueShift);
         }
 
-        long elapsed = ticks - START_DELAY_TICKS;
-        long stage = (elapsed / STAGE_TICKS) % 7L;
-        long withinStage = elapsed % STAGE_TICKS;
-        float progress = MathHelper.clamp((float) withinStage / (float) TRANSITION_TICKS, 0.0F, 1.0F);
-        hueShift = ((stage + progress) / 7.0F) % 1.0F;
+        float progress = MathHelper.clamp((float) elapsedTicks / (float) transitionTicks, 0.0F, 1.0F);
+        // Smoothstep avoids abrupt changes at either end of each random transition.
+        progress = progress * progress * (3.0F - 2.0F * progress);
+
+        float delta = targetHue - startHue;
+        if (delta > 0.5F) delta -= 1.0F;
+        if (delta < -0.5F) delta += 1.0F;
+        hueShift = (startHue + delta * progress) % 1.0F;
+        if (hueShift < 0.0F) hueShift += 1.0F;
+    }
+
+    private static void chooseNextTarget(float currentHue) {
+        startHue = currentHue;
+        targetHue = RANDOM.nextFloat();
+        transitionTicks = MIN_TRANSITION_TICKS + RANDOM.nextInt(MAX_TRANSITION_TICKS - MIN_TRANSITION_TICKS + 1);
+        elapsedTicks = 0;
+    }
+
+    /**
+     * Called at the end of GameRenderer.render, after both the 3D world and HUD
+     * have been drawn, so the post effect can tint the complete frame.
+     */
+    public static void renderFullFrame() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null || client.player == null || effect == null) {
+            return;
+        }
+        if (hueUniform != null) {
+            hueUniform.set(hueShift);
+        }
+        effect.render(0.0F);
     }
 }
