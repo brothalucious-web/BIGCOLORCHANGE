@@ -1,21 +1,19 @@
-# Big Color Change / Color Evolution
+# Big Color Change — Color Evolution
 
-A client-side Fabric mod for Minecraft 1.21.2 that starts with normal Minecraft colors and gradually shifts world colors over time.
+Client-side Fabric mod for Minecraft **1.21.2**.
 
-## Features
-- Starts with the normal world appearance.
-- Cycles color families through hue shifts over time.
-- Configurable defaults in the mod source.
+## Intended behavior
+- Starts in grayscale when a world is entered.
+- Every 60 seconds, the mod advances its color evolution and chooses an independent random hue for a category: sky, terrain, entities, or HUD/UI.
+- Color hues are random rather than a fixed red/blue/green sequence.
+- Color fades in smoothly over approximately five seconds.
+- This is a client-side visual effect; it does not change world data.
+
+## Rendering limitation
+The effect is a full-frame post-process using approximate screen-space masks. It cannot perfectly identify every block, mob, sky pixel, or individual UI element: entities overlap terrain, and HUD elements are not all positioned at screen edges. Proper semantic separation needs deeper render-layer integration or dedicated masks.
 
 ## Build
-Requires Java 21. From the project root run:
+Requires Java 21. On Windows run `gradlew.bat build`; on macOS/Linux run `./gradlew build`. The JAR should appear in `build/libs/`.
 
-- Windows: `gradlew.bat build`
-- macOS/Linux: `./gradlew build`
-
-The built mod JAR will appear in `build/libs/`.
-
-## Install
-Put the built JAR in your Minecraft 1.21.2 `mods` folder alongside Fabric Loader. Install Fabric API only if required by the selected project dependencies.
-
-> This repository is a starting implementation; verify the build and in-game shader behavior on your exact Minecraft/Fabric setup before using it in a world.
+## Verification
+A successful CI build confirms compilation and packaging only. Launch Minecraft 1.21.2 with Fabric Loader, Fabric API, and Satin to verify shader loading and actual in-game appearance.
