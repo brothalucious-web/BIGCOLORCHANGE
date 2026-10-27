@@ -3,9 +3,10 @@ package dev.brothalucious.bigcolorchange;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.GraphicsMode;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import org.ladysnake.satin.api.event.ShaderEffectRenderCallback;
+import org.ladysnake.satin.api.event.PostWorldRenderCallback;
 import org.ladysnake.satin.api.managed.ManagedShaderEffect;
 import org.ladysnake.satin.api.managed.ShaderEffectManager;
 import org.ladysnake.satin.api.managed.uniform.Uniform1f;
@@ -31,12 +32,26 @@ public final class BigColorChangeClient implements ClientModInitializer {
         hueUniform = effect.findUniform1f("HueShift");
 
         ClientTickEvents.END_CLIENT_TICK.register(BigColorChangeClient::tick);
-        ShaderEffectRenderCallback.EVENT.register(tickDelta -> {
+
+        // This callback runs after the world is rendered every frame. The previous
+        // ShaderEffectRenderCallback only runs when Minecraft draws the entity-outline
+        // framebuffer, so it does not reliably apply a full-screen effect.
+        PostWorldRenderCallback.EVENT.register((camera, tickDelta) -> {
             MinecraftClient client = MinecraftClient.getInstance();
-            if (client.world != null && client.player != null && effect != null) {
-                if (hueUniform != null) hueUniform.set(hueShift);
-                effect.render(tickDelta);
+            if (client.world == null || client.player == null || effect == null) {
+                return;
             }
+
+            // Satin warns that rendering a PostEffectProcessor here conflicts with
+            // Fabulous graphics. Keep the game visible and report the limitation.
+            if (client.options.getGraphicsMode().getValue() == GraphicsMode.FABULOUS) {
+                return;
+            }
+
+            if (hueUniform != null) {
+                hueUniform.set(hueShift);
+            }
+            effect.render(tickDelta);
         });
 
         LOGGER.info("Big Color Change loaded: normal colors for 60 seconds, then a gradual hue cycle.");
