@@ -1,0 +1,10 @@
+{
+  "vertex": "minecraft:post/blit",
+  "fragment": "bigcolorchange:post/color_shift",
+  "samplers": [
+    { "name": "In" }
+  ],
+  "uniforms": [
+    { "name": "HueShift", "type": "float", "value": 0.0 }
+  ]
+}
