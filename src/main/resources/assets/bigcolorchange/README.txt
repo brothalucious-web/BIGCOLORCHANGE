@@ -1,6 +1,3 @@
-Big Color Change resource placeholder.
+Color Evolution resource note.
 
-The current version initializes a time-based hue-cycle controller and starts with
-normal vanilla colors. The actual rendered world color transform is not yet
-implemented; the controller values are ready to be connected to a tested
-Minecraft 1.21.2 post-processing pipeline.
+The client starts grayscale and adds independently randomized category hues over time using a screen-space post effect. See the root README for intended behavior and limitations.
