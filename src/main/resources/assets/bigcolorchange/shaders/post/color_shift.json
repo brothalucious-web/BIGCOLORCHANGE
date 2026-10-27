@@ -2,7 +2,7 @@
   "vertex": "minecraft:post/blit",
   "fragment": "bigcolorchange:post/color_shift",
   "samplers": [
-    { "name": "InSampler" }
+    { "name": "In" }
   ],
   "uniforms": [
     {
