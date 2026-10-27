@@ -1,7 +1,6 @@
 package dev.brothalucious.bigcolorchange;
 
 import java.util.Random;
-
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
@@ -13,76 +12,77 @@ import org.ladysnake.satin.api.managed.uniform.Uniform1f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** Client-side, grayscale-first color evolution. */
 public final class BigColorChangeClient implements ClientModInitializer {
     public static final String MOD_ID = "bigcolorchange";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-
     private static final Random RANDOM = new Random();
-    private static final int MIN_TRANSITION_TICKS = 80;
-    private static final int MAX_TRANSITION_TICKS = 180;
+    private static final int EVOLUTION_TICKS = 20 * 60;
+    private static final int TRANSITION_TICKS = 20 * 5;
 
     private static ManagedShaderEffect effect;
-    private static Uniform1f hueUniform;
-    private static int transitionTicks;
-    private static int elapsedTicks;
-    private static float startHue;
-    private static float targetHue;
-    private static float hueShift;
+    private static Uniform1f transitionUniform, colorCountUniform, skyHueUniform, terrainHueUniform, entitiesHueUniform, uiHueUniform;
+    private static int ticksSinceJoin, lastEvolutionStep = -1, colorCount;
+    private static float transitionProgress, skyHue, terrainHue, entitiesHue, uiHue;
 
     @Override
     public void onInitializeClient() {
-        effect = ShaderEffectManager.getInstance().manage(Identifier.of(MOD_ID, "color_shift"));
-        hueUniform = effect.findUniform1f("HueShift");
-        chooseNextTarget(0.0F);
-
+        try {
+            effect = ShaderEffectManager.getInstance().manage(Identifier.of(MOD_ID, "color_shift"));
+            transitionUniform = effect.findUniform1f("Transition");
+            colorCountUniform = effect.findUniform1f("ColorCount");
+            skyHueUniform = effect.findUniform1f("SkyHue");
+            terrainHueUniform = effect.findUniform1f("TerrainHue");
+            entitiesHueUniform = effect.findUniform1f("EntitiesHue");
+            uiHueUniform = effect.findUniform1f("UiHue");
+        } catch (RuntimeException ex) {
+            LOGGER.error("Could not initialize Big Color Change post effect. Verify Satin and Minecraft versions.", ex);
+            effect = null;
+        }
         ClientTickEvents.END_CLIENT_TICK.register(BigColorChangeClient::tick);
-        LOGGER.info("Big Color Change loaded: continuously shifting screen colors through smooth, randomized hue transitions.");
+        LOGGER.info("Big Color Change initialized: grayscale start, then random color evolution every minute.");
     }
 
     private static void tick(MinecraftClient client) {
-        if (client.world == null || client.player == null) {
-            elapsedTicks = 0;
-            hueShift = 0.0F;
-            startHue = 0.0F;
-            chooseNextTarget(0.0F);
-            return;
+        if (client.world == null || client.player == null) { resetEvolution(); return; }
+        ticksSinceJoin++;
+        int step = ticksSinceJoin / EVOLUTION_TICKS;
+        while (lastEvolutionStep < step && colorCount < 4) {
+            lastEvolutionStep++;
+            chooseRandomCategoryHue();
         }
-
-        elapsedTicks++;
-        if (elapsedTicks >= transitionTicks) {
-            chooseNextTarget(hueShift);
-        }
-
-        float progress = MathHelper.clamp((float) elapsedTicks / (float) transitionTicks, 0.0F, 1.0F);
-        // Smoothstep avoids abrupt changes at either end of each random transition.
-        progress = progress * progress * (3.0F - 2.0F * progress);
-
-        float delta = targetHue - startHue;
-        if (delta > 0.5F) delta -= 1.0F;
-        if (delta < -0.5F) delta += 1.0F;
-        hueShift = (startHue + delta * progress) % 1.0F;
-        if (hueShift < 0.0F) hueShift += 1.0F;
+        transitionProgress = MathHelper.clamp((ticksSinceJoin % EVOLUTION_TICKS) / (float) TRANSITION_TICKS, 0.0F, 1.0F);
+        transitionProgress = transitionProgress * transitionProgress * (3.0F - 2.0F * transitionProgress);
     }
 
-    private static void chooseNextTarget(float currentHue) {
-        startHue = currentHue;
-        targetHue = RANDOM.nextFloat();
-        transitionTicks = MIN_TRANSITION_TICKS + RANDOM.nextInt(MAX_TRANSITION_TICKS - MIN_TRANSITION_TICKS + 1);
-        elapsedTicks = 0;
+    private static void chooseRandomCategoryHue() {
+        int category = RANDOM.nextInt(4);
+        float hue = RANDOM.nextFloat();
+        switch (category) {
+            case 0 -> skyHue = hue;
+            case 1 -> terrainHue = hue;
+            case 2 -> entitiesHue = hue;
+            case 3 -> uiHue = hue;
+            default -> throw new IllegalStateException("Unexpected category");
+        }
+        colorCount = Math.min(4, colorCount + 1);
     }
 
-    /**
-     * Called at the end of GameRenderer.render, after both the 3D world and HUD
-     * have been drawn, so the post effect can tint the complete frame.
-     */
+    private static void resetEvolution() {
+        ticksSinceJoin = 0; lastEvolutionStep = -1; colorCount = 0; transitionProgress = 0.0F;
+        skyHue = terrainHue = entitiesHue = uiHue = 0.0F;
+    }
+
+    /** Called by the renderer mixin after the game and HUD frame is drawn. */
     public static void renderFullFrame() {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null || client.player == null || effect == null) {
-            return;
-        }
-        if (hueUniform != null) {
-            hueUniform.set(hueShift);
-        }
+        if (client.world == null || client.player == null || effect == null) return;
+        if (transitionUniform != null) transitionUniform.set(transitionProgress);
+        if (colorCountUniform != null) colorCountUniform.set(colorCount);
+        if (skyHueUniform != null) skyHueUniform.set(skyHue);
+        if (terrainHueUniform != null) terrainHueUniform.set(terrainHue);
+        if (entitiesHueUniform != null) entitiesHueUniform.set(entitiesHue);
+        if (uiHueUniform != null) uiHueUniform.set(uiHue);
         effect.render(0.0F);
     }
 }
