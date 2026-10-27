@@ -3,17 +3,15 @@
   "id": "bigcolorchange",
   "version": "${version}",
   "name": "Big Color Change",
-  "description": "A client-side color evolution effect for Minecraft.",
+  "description": "A client-side post-processing color evolution effect for Minecraft.",
   "authors": ["brothalucious-web"],
   "environment": "client",
-  "entrypoints": {
-    "client": [
-      "dev.brothalucious.bigcolorchange.BigColorChangeClient"
-    ]
-  },
+  "entrypoints": { "client": ["dev.brothalucious.bigcolorchange.BigColorChangeClient"] },
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.2",
-    "java": ">=21"
+    "java": ">=21",
+    "fabric-api": "*",
+    "satin": ">=3.0.0-alpha.1"
   }
 }
